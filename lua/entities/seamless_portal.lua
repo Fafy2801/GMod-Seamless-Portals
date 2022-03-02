@@ -4,7 +4,6 @@
 AddCSLuaFile()
 
 ENT.Type = "anim"
-ENT.Base = "base_gmodentity"
 
 ENT.Category		= "Seamless Portals"
 ENT.PrintName		= "Seamless Portal"
