@@ -90,9 +90,10 @@ end
 
 SWEP.RandSalt = 0
 function SWEP:ShootFX(primary)
-	if (IsFirstTimePredicted()) then
-		self.RandSalt = self.RandSalt + 1
-	end
+	if !IsFirstTimePredicted() then return end
+
+	self.RandSalt = self.RandSalt + 1
+
 	local snd = skins[self.Skin][primary and "shootPrimarySound" or "shootSecondarySound"]
 	if (istable(snd)) then
 		local key = math.floor(util.SharedRandom("mee_swep_rand", 0, #snd, self.RandSalt)) + 1
