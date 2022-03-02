@@ -7,7 +7,6 @@ AddCSLuaFile()
 local freezePly = false
 local function updateCalcViews(finalPos, finalVel, finalSize)
 	timer.Remove("portals_eye_fix_delay")	--just in case you enter the portal while the timer is running
-	
 	local weaponAng
 	local weaponPos = LocalPlayer():EyePos()
 	local addAngle = 1
@@ -132,73 +131,71 @@ hook.Add("Move", "seamless_portal_teleport", function(ply, mv)
 	
 	if !tr.Hit then return end
 	local hitPortal = tr.Entity
-	if hitPortal:GetClass() == "seamless_portal" and hitPortal:ExitPortal() and hitPortal:ExitPortal():IsValid() then
-		if mv:GetVelocity():Dot(hitPortal:GetUp()) < 0 then
-			if ply.PORTAL_TELEPORTING then return end
-			freezePly = true
+	if hitPortal:GetClass() == "seamless_portal" and hitPortal:ExitPortal() and hitPortal:ExitPortal():IsValid() and mv:GetVelocity():Dot(hitPortal:GetUp()) < 0 then
+		if ply.PORTAL_TELEPORTING then return end
+		freezePly = true
 
-            -- wow look at all of this code just to teleport the player
-			local editedPos, editedAng = SeamlessPortals.TransformPortal(hitPortal, hitPortal:ExitPortal(), tr.HitPos, mv:GetVelocity():Angle())
-			local newEyeAngle = ply:EyeAngles()
-			newEyeAngle:RotateAroundAxis(hitPortal:GetForward(), 180)
-			local editedEyeAng = hitPortal:ExitPortal():LocalToWorldAngles(hitPortal:WorldToLocalAngles(newEyeAngle))
-			local max = math.Max(mv:GetVelocity():Length(), hitPortal:ExitPortal():GetUp():Dot(-physenv.GetGravity() / 3))
+        -- wow look at all of this code just to teleport the player
+		local editedPos, editedAng = SeamlessPortals.TransformPortal(hitPortal, hitPortal:ExitPortal(), tr.HitPos, mv:GetVelocity():Angle())
+		local newEyeAngle = ply:EyeAngles()
+		newEyeAngle:RotateAroundAxis(hitPortal:GetForward(), 180)
+		local editedEyeAng = hitPortal:ExitPortal():LocalToWorldAngles(hitPortal:WorldToLocalAngles(newEyeAngle))
+		local max = math.Max(mv:GetVelocity():Length(), hitPortal:ExitPortal():GetUp():Dot(-physenv.GetGravity() / 3))
 
-			--ground can fluxuate depending on how the user places the portals, so we need to make sure we're not going to teleport into the ground
-			local editedPos = editedPos - (ply:EyePos() - ply:GetPos())
-			traceTable.start = editedPos + (ply:EyePos() - ply:GetPos())
-			traceTable.endpos = editedPos - Vector(0, 0, 0.1)
-			traceTable.filter = seamless_check
-			local floor_trace = util.TraceLine(traceTable)
+		--ground can fluxuate depending on how the user places the portals, so we need to make sure we're not going to teleport into the ground
+		local editedPos = editedPos - (ply:EyePos() - ply:GetPos())
+		traceTable.start = editedPos + (ply:EyePos() - ply:GetPos())
+		traceTable.endpos = editedPos - Vector(0, 0, 0.1)
+		traceTable.filter = seamless_check
+		local floor_trace = util.TraceLine(traceTable)
 
-			-- scaling part
-			local finalPos = editedPos
+		-- scaling part
+		local finalPos = editedPos
 
-			-- dont do extrusion if the player is noclipping
-			local offset
-			if ply:GetMoveType() != MOVETYPE_NOCLIP then
-				offset = floor_trace.HitPos
-			else
-				offset = editedPos
-			end
+		-- dont do extrusion if the player is noclipping
+		local offset
+		if ply:GetMoveType() != MOVETYPE_NOCLIP then
+			offset = floor_trace.HitPos
+		else
+			offset = editedPos
+		end
 
-			local exitSize = (hitPortal:ExitPortal():GetExitSize() / hitPortal:GetExitSize())
-			if ply.SCALE_MULTIPLIER then
-				ply:ConCommand("scale_multiplier " .. (ply.SCALE_MULTIPLIER * exitSize))
-				ply.SCALE_MULTIPLIER = math.Clamp(ply.SCALE_MULTIPLIER * exitSize, 0.01, 10)
-				finalPos = finalPos + ((ply:EyePos() - ply:GetPos()) - (ply:EyePos() - ply:GetPos()) * exitSize)
-			end
+		local exitSize = (hitPortal:ExitPortal():GetExitSize() / hitPortal:GetExitSize())
+		if ply.SCALE_MULTIPLIER then
+			ply:ConCommand("scale_multiplier " .. (ply.SCALE_MULTIPLIER * exitSize))
+			ply.SCALE_MULTIPLIER = math.Clamp(ply.SCALE_MULTIPLIER * exitSize, 0.01, 10)
+			finalPos = finalPos + ((ply:EyePos() - ply:GetPos()) - (ply:EyePos() - ply:GetPos()) * exitSize)
+		end
 
-			finalPos = finalPos - (editedPos - offset) * exitSize + Vector(0, 0, 0.1)	-- small offset so we arent in the floor
+		finalPos = finalPos - (editedPos - offset) * exitSize + Vector(0, 0, 0.1)	-- small offset so we arent in the floor
 
-			-- apply final velocity
-			mv:SetVelocity(editedAng:Forward() * max * exitSize)
+		-- apply final velocity
+		mv:SetVelocity(editedAng:Forward() * max * exitSize)
 
 			-- lerp fix for singleplayer
-			if game.SinglePlayer() then
-				ply:SetPos(finalPos)
-				ply:SetEyeAngles(editedEyeAng)
-			end
-
-			-- send the client the new position
-			if SERVER then 
-				mv:SetOrigin(finalPos)
-				net.Start("PORTALS_FREEZE")
-				net.Send(ply)
-			else
-				updateCalcViews(finalPos + (ply:EyePos() - ply:GetPos()), editedAng:Forward() * max * exitSize, (ply.SCALE_MULTIPLIER or 1) * exitSize)	--fix viewmodel lerping for a tiny bit
-				ply:SetEyeAngles(editedEyeAng)
-			end
-
-			ply.PORTAL_TELEPORTING = true 
-			ply.PORTAL_STUCK_OFFSET = nil
-			ply:ResetHull()
-
-			timer.Simple(0, function()
-				ply.PORTAL_TELEPORTING = false
-			end)
-
-			return true
+		if game.SinglePlayer() then
+			ply:SetPos(finalPos)
+			ply:SetEyeAngles(editedEyeAng)
 		end
+
+		-- send the client the new position
+		if SERVER then 
+			mv:SetOrigin(finalPos)
+			net.Start("PORTALS_FREEZE")
+			net.Send(ply)
+		else
+			updateCalcViews(finalPos + (ply:EyePos() - ply:GetPos()), editedAng:Forward() * max * exitSize, (ply.SCALE_MULTIPLIER or 1) * exitSize)	--fix viewmodel lerping for a tiny bit
+			ply:SetEyeAngles(editedEyeAng)
+		end
+
+		ply.PORTAL_TELEPORTING = true 
+		ply.PORTAL_STUCK_OFFSET = nil
+		ply:ResetHull()
+
+		timer.Simple(0, function()
+			ply.PORTAL_TELEPORTING = false
+		end)
+
+		return true
 	end
 end)

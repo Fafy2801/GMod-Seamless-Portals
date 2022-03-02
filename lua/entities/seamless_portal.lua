@@ -26,15 +26,17 @@ function ENT:Think()
 		self._width = self:GetWidth()
 		self._height = self:GetHeight()
 		local maxs = Vector(self._height * 0.5, self._width * 0.5, 1.75)
-		self:PhysicsInitBox(-maxs, maxs)
 		self:SetCollisionBounds(-maxs, maxs)
+		self:PhysicsInitBox(-maxs, maxs)
 
-		if SERVER then
-			self:SetMoveType(MOVETYPE_VPHYSICS)
-			self:SetSolid(SOLID_VPHYSICS)
-			self:GetPhysicsObject():EnableMotion(false)
-			self:SetCollisionGroup(COLLISION_GROUP_WORLD)
-			self:EnableCustomCollisions(true)
+		local physobj = self:GetPhysicsObject()
+		self:SetMoveType(MOVETYPE_VPHYSICS)
+		self:SetSolid(SOLID_VPHYSICS)
+		self:SetCollisionGroup(COLLISION_GROUP_WORLD)
+		self:EnableCustomCollisions(true)
+
+		if IsValid(physobj) then
+			physobj:EnableMotion(false)
 		end
 	end
 
@@ -240,7 +242,6 @@ SeamlessPortals.TransformPortal = function(a, b, pos, angle, mul)
 	
 	angle:RotateAroundAxis(a:GetForward(), 180)
 	local editedAng = b:LocalToWorldAngles(a:WorldToLocalAngles(angle))
-
 	return editedPos, editedAng
 end
 
