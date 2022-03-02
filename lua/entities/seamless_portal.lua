@@ -13,10 +13,45 @@ ENT.Purpose			= ""
 ENT.Instructions	= ""
 ENT.Spawnable		= true
 
+function ENT:SetupDataTables()
+	self:NetworkVar("Entity", 0, "LinkedPortal")
+	self:NetworkVar("Float", 0, "PortalScale")
+	self:NetworkVar("Float", 1, "Width")
+	self:NetworkVar("Float", 2, "Height")
+end
+
+function ENT:Think()
+	-- NetworkVarNotify doesn't work as it should
+	if self._width != self:GetWidth() or self._height != self:GetHeight() then
+		self._width = self:GetWidth()
+		self._height = self:GetHeight()
+		local maxs = Vector(self._height * 0.5, self._width * 0.5, 1.75)
+		self:PhysicsInitBox(-maxs, maxs)
+		self:SetCollisionBounds(-maxs, maxs)
+
+		if SERVER then
+			self:SetMoveType(MOVETYPE_VPHYSICS)
+			self:SetSolid(SOLID_VPHYSICS)
+			self:GetPhysicsObject():EnableMotion(false)
+			self:SetCollisionGroup(COLLISION_GROUP_WORLD)
+			self:EnableCustomCollisions(true)
+		end
+	end
+
+	-- Fix custom physobj
+	if CLIENT then
+		local physobj = self:GetPhysicsObject()
+		if IsValid(physobj) then
+			physobj:SetPos(self:GetPos())
+			physobj:SetAngles(self:GetAngles())
+		end
+	end
+end
+
 -- get exit portal
 function ENT:ExitPortal()
-	if CLIENT then 
-		return self:GetNWEntity("PORTAL_EXIT")
+	if CLIENT then
+		return self:GetLinkedPortal()
 	end
 	return self.PORTAL_EXIT
 end
@@ -25,20 +60,20 @@ function ENT:LinkPortal(ent)
 	if !ent or !ent:IsValid() then return end
 	self.PORTAL_EXIT = ent
 	ent.PORTAL_EXIT = self
-	self:SetNWEntity("PORTAL_EXIT", ent)
-	ent:SetNWEntity("PORTAL_EXIT", self)
+	self:SetLinkedPortal(ent)
+	ent:SetLinkedPortal(self)
 end
 
 -- custom size for portal
 function ENT:SetExitSize(n)
 	self.PORTAL_SCALE = n
-	self:SetNWFloat("PORTAL_SCALE", n)
+	self:SetPortalScale(n)
 	self:Activate()
 end
 
 function ENT:GetExitSize()
-	if CLIENT then 
-		return self:GetNWFloat("PORTAL_SCALE")
+	if CLIENT then
+		return self:GetPortalScale()
 	end
 	return self.PORTAL_SCALE
 end
@@ -76,6 +111,8 @@ function ENT:Initialize()
 		self:SetCollisionGroup(COLLISION_GROUP_WORLD)
 		self:DrawShadow(false)
 		self:SetExitSize(1)
+		self:SetWidth(100)
+		self:SetHeight(100)
 		print("Portal " .. tostring(self) .." was initialized")
 		SeamlessPortals.PortalIndex = SeamlessPortals.PortalIndex + 1
 	end
