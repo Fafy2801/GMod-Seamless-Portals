@@ -32,18 +32,20 @@ timer.Create("seamless_portal_distance_fix", 0.25, 0, function()
 		return a:GetPos():DistToSqr(EyePos()) < b:GetPos():DistToSqr(EyePos())
 	end)
 
-	if SeamlessPortals.PortalIndex < 1 then		-- black halo fix
-		if haloChanged then
-			LocalPlayer():ConCommand("physgun_halo 1")	-- sorry animators, but we need to turn this back on
-			LocalPlayer():ConCommand("effects_freeze 1")
-			LocalPlayer():ConCommand("effects_unfreeze 1")
-			haloChanged = false
+	if GAMEMODE.FolderName == "sandbox" then
+		if SeamlessPortals.PortalIndex < 1 then		-- black halo fix
+			if haloChanged then
+				LocalPlayer():ConCommand("physgun_halo 1")	-- sorry animators, but we need to turn this back on
+				LocalPlayer():ConCommand("effects_freeze 1")
+				LocalPlayer():ConCommand("effects_unfreeze 1")
+				haloChanged = false
+			end
+		else
+			haloChanged = true
+			LocalPlayer():ConCommand("physgun_halo 0")
+			LocalPlayer():ConCommand("effects_freeze 0")
+			LocalPlayer():ConCommand("effects_unfreeze 0")
 		end
-	else
-		haloChanged = true
-		LocalPlayer():ConCommand("physgun_halo 0")
-		LocalPlayer():ConCommand("effects_freeze 0")
-		LocalPlayer():ConCommand("effects_unfreeze 0")
 	end
 
 	-- update sky material (I guess it can change?)
