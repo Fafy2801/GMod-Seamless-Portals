@@ -141,9 +141,6 @@ end
 
 function ENT:OnRemove()
 	SeamlessPortals.PortalIndex = SeamlessPortals.PortalIndex - 1
-	if SERVER then
-		SafeRemoveEntity(self:ExitPortal())
-	end
 end
 
 local function DrawQuadEasier(e, multiplier, offset, rotate)
